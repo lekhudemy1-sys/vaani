@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vaani — Audience intelligence for YouTube</title>
+<meta name="description" content="Paste a YouTube link and see what the audience really thinks: sentiment, demands, questions and what to fix next. Works in English, Hindi and Hinglish.">
+<meta name="theme-color" content="#060814">
+<meta property="og:title" content="Vaani — Audience intelligence for YouTube">
+<meta property="og:description" content="Sentiment, demands and recommendations from YouTube comments in English, Hindi and Hinglish.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%234FD8EB'/%3E%3Cstop offset='1' stop-color='%238B7BFF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M8 4h24a5 5 0 0 1 5 5v17a5 5 0 0 1-5 5H21l-8 6v-6H8a5 5 0 0 1-5-5V9a5 5 0 0 1 5-5z' fill='url(%23g)'/%3E%3Cg stroke='%23060814' stroke-width='2.8' stroke-linecap='round'%3E%3Cpath d='M12 15v6M17 11v14M22 8v20M27 12v12M32 16v4'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+<style>
+:root{
+  --bg:#060814; --bg2:#0b1022; --glass:rgba(255,255,255,.045); --glass2:rgba(255,255,255,.08);
+  --line:rgba(160,175,255,.14); --text:#e9ecfa; --muted:#8a92b2; --dim:#5d6585;
+  --aqua:#4fd8eb; --violet:#8b7bff; --pos:#3ddc97; --neu:#8e9ac0; --neg:#ff5c7a; --warn:#f5c451;
+  --grad:linear-gradient(120deg,var(--aqua),var(--violet));
+  --display:'Sora','Manrope',system-ui,sans-serif; --body:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{font-family:var(--body);background:var(--bg);color:var(--text);line-height:1.55;min-height:100vh;min-height:100dvh;
+  padding-top:var(--safe-t);padding-bottom:var(--safe-b);overflow-x:hidden;
+  background-image:radial-gradient(900px 500px at 12% -8%,rgba(79,216,235,.13),transparent 60%),
+  radial-gradient(800px 520px at 100% 0%,rgba(139,123,255,.16),transparent 60%),
+  linear-gradient(rgba(160,175,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(160,175,255,.035) 1px,transparent 1px);
+  background-size:auto,auto,44px 44px,44px 44px;background-attachment:fixed}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+:focus-visible{outline:2px solid var(--aqua);outline-offset:2px;border-radius:8px}
+.wrap{max-width:1240px;margin:0 auto;padding:0 clamp(14px,3vw,28px) 72px}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:12px clamp(14px,3vw,28px);margin:0 calc(-1*clamp(14px,3vw,28px));
+  background:rgba(6,8,20,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:inherit}
+.brand svg{width:34px;height:34px;flex:none;filter:drop-shadow(0 4px 14px rgba(139,123,255,.45))}
+.brand b{font:700 1.25rem/1 var(--display);letter-spacing:.01em}
+.brand small{display:block;font-size:.72rem;color:var(--muted);margin-top:3px}
+.top-r{display:flex;align-items:center;gap:8px}
+.badge{display:inline-flex;align-items:center;gap:7px;font-size:.76rem;font-weight:600;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--glass);color:var(--muted)}
+.badge i{width:7px;height:7px;border-radius:50%;background:var(--warn)}
+.badge.live{color:#bdf3da}.badge.live i{background:var(--pos);box-shadow:0 0 0 0 rgba(61,220,151,.6);animation:ping 2.2s infinite}
+@keyframes ping{70%{box-shadow:0 0 0 7px rgba(61,220,151,0)}100%{box-shadow:0 0 0 0 rgba(61,220,151,0)}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 15px;border-radius:12px;border:1px solid var(--line);background:var(--glass);font-weight:600;font-size:.86rem;transition:background .15s,border-color .15s}
+.btn:hover{background:var(--glass2);border-color:rgba(160,175,255,.3)}
+.btn svg{width:16px;height:16px;flex:none}
+.btn.primary{background:var(--grad);color:#05101c;border:0;font-weight:700;padding:13px 26px;font-size:.95rem;box-shadow:0 10px 30px -8px rgba(100,140,255,.55)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:#ff9db0;border-color:rgba(255,92,122,.3)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sm{padding:6px 11px;font-size:.78rem;border-radius:10px}
+
+/* hero + composer */
+.lead{padding:clamp(34px,7vw,76px) 0 26px;max-width:820px}
+.lead h1{font:700 clamp(2rem,5.4vw,3.7rem)/1.06 var(--display);letter-spacing:-.025em}
+.lead h1 span{background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.lead p{margin-top:16px;color:var(--muted);font-size:clamp(.95rem,1.8vw,1.08rem);max-width:600px}
+.wave{display:flex;align-items:flex-end;gap:4px;height:56px;margin-top:30px}
+.wave i{flex:1;max-width:9px;border-radius:4px;transform-origin:bottom;transform:scaleY(0);animation:rise .7s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes rise{to{transform:scaleY(1)}}
+.composer{padding:clamp(16px,2.4vw,24px);border-radius:24px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03));box-shadow:0 30px 80px -30px rgba(0,0,0,.7)}
+.urlrow{display:flex;gap:10px;flex-wrap:wrap}
+.field{flex:1;min-width:230px;display:flex;align-items:center;gap:8px;background:rgba(5,8,20,.7);border:1px solid var(--line);border-radius:14px;padding:0 8px 0 16px;transition:border-color .15s,box-shadow .15s}
+.field:focus-within{border-color:var(--aqua);box-shadow:0 0 0 4px rgba(79,216,235,.12)}
+.field input{flex:1;background:none;border:0;outline:0;padding:14px 0;font-size:.97rem;min-width:0}
+.field input::placeholder{color:var(--dim)}
+.icon-btn{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:var(--muted);flex:none}
+.icon-btn:hover{background:var(--glass2);color:var(--text)}
+.icon-btn svg{width:17px;height:17px}
+.opts{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:center;margin-top:14px;font-size:.83rem;color:var(--muted)}
+.opts label{display:flex;align-items:center;gap:8px}
+select,.sel{background:rgba(5,8,20,.7);border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:.84rem;outline:0;color:var(--text)}
+select:focus{border-color:var(--aqua)}
+option{background:#0b1022}
+.opts input[type=checkbox]{accent-color:var(--aqua);width:16px;height:16px}
+.preview{display:none;margin-top:16px;border-radius:16px;overflow:hidden;border:1px solid var(--line);background:#000}
+.preview.on{display:block}
+.preview iframe{width:100%;aspect-ratio:16/9;max-height:340px;border:0;display:block}
+.err{display:none;margin-top:14px;padding:12px 15px;border-radius:12px;border:1px solid rgba(255,92,122,.35);background:rgba(255,92,122,.09);color:#ffb3c1;font-size:.9rem}
+.err.on{display:block}
+.loader{display:none;margin-top:18px;padding:22px;border-radius:18px;border:1px solid var(--line);background:rgba(5,8,20,.55);gap:22px;align-items:center;flex-wrap:wrap}
+.loader.on{display:flex}
+.ring{position:relative;width:92px;height:92px;flex:none}
+.ring svg{transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:7}
+.ring .bg{stroke:rgba(255,255,255,.08)}
+.ring .fg{stroke:url(#ringg);stroke-linecap:round;transition:stroke-dashoffset .4s}
+.ring b{position:absolute;inset:0;display:grid;place-items:center;font:600 1.1rem var(--display)}
+.steps{flex:1;min-width:200px;display:grid;gap:5px;font-size:.88rem}
+.steps div{color:var(--dim);transition:color .3s;display:flex;gap:9px;align-items:center}
+.steps div::before{content:"";width:8px;height:8px;border-radius:50%;border:1.5px solid currentColor;flex:none}
+.steps .on{color:var(--text)}.steps .on::before{background:var(--aqua);border-color:var(--aqua)}
+.steps .done{color:var(--pos)}.steps .done::before{background:var(--pos);border-color:var(--pos)}
+
+/* results */
+#results{display:none;margin-top:28px}
+body.has-results .lead{display:none}
+body.has-results #results{display:block}
+body.has-results .composer{margin-top:22px}
+.vh{display:flex;gap:clamp(14px,2.4vw,24px);flex-wrap:wrap;align-items:center;padding:clamp(14px,2vw,20px);border-radius:22px;border:1px solid var(--line);background:var(--glass)}
+.vh img{width:min(100%,220px);aspect-ratio:16/9;object-fit:cover;border-radius:14px;background:#000;flex:none}
+.vh .info{flex:1;min-width:230px}
+.vh h2{font:600 clamp(1.05rem,2.2vw,1.35rem)/1.3 var(--display)}
+.vh .ch{color:var(--muted);font-size:.9rem;margin-top:3px}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
+.chip{font-size:.75rem;font-weight:600;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.chip b{color:var(--text);font-weight:700}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.warn{margin-top:12px;padding:11px 15px;border-radius:12px;background:rgba(245,196,81,.09);border:1px solid rgba(245,196,81,.3);color:#f7dc9b;font-size:.86rem}
+.tabs{position:sticky;top:61px;z-index:20;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:20px 0 18px;padding:6px;border-radius:16px;border:1px solid var(--line);background:rgba(8,12,28,.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1 0 auto;padding:10px 18px;border-radius:11px;font-weight:600;font-size:.88rem;color:var(--muted);white-space:nowrap;transition:background .15s,color .15s}
+.tab:hover{color:var(--text)}
+.tab[aria-selected=true]{background:var(--glass2);color:var(--text);box-shadow:inset 0 0 0 1px rgba(160,175,255,.25)}
+.panel{display:none}.panel.on{display:block}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(12,1fr);margin-bottom:16px}
+.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c7{grid-column:span 7}.c8{grid-column:span 8}.c12{grid-column:span 12}
+@media(max-width:980px){.c4,.c5,.c6,.c7,.c8{grid-column:span 12}.tabs{top:57px}}
+.card{padding:clamp(16px,2vw,22px);border-radius:20px;border:1px solid var(--line);background:var(--glass);min-width:0}
+.card h3{font:600 .98rem var(--display);margin-bottom:4px}
+.card .sub{font-size:.8rem;color:var(--muted);margin-bottom:14px}
+.chart{position:relative;height:250px}
+.kpis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+.kpi{padding:15px 16px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.035)}
+.kpi span{font-size:.76rem;color:var(--muted)}
+.kpi b{display:block;font:700 1.55rem/1.2 var(--display);margin-top:2px}
+.kpi small{font-size:.76rem;color:var(--dim)}
+.kpi.pos b{color:var(--pos)}.kpi.neg b{color:var(--neg)}.kpi.neu b{color:var(--neu)}
+.gauge{display:flex;flex-direction:column;align-items:center;text-align:center}
+.gauge svg{width:100%;max-width:330px;overflow:visible}
+.gauge .num{font:700 3.3rem/1 var(--display);margin-top:-92px}
+.gauge .lab{font:600 1rem var(--display);margin-top:6px}
+.gauge .meta{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.ins{list-style:none;display:grid;gap:10px}
+.ins li{padding:12px 14px;border-radius:13px;background:rgba(255,255,255,.04);border-left:3px solid var(--aqua);font-size:.9rem}
+.bars{display:grid;gap:14px}
+.bar-h{display:flex;justify-content:space-between;gap:10px;font-size:.86rem;margin-bottom:5px}
+.bar-h b{text-transform:capitalize}
+.bar{display:flex;height:9px;border-radius:6px;overflow:hidden;background:rgba(255,255,255,.07)}
+.bar i{display:block;height:100%}
+.bar .p{background:var(--pos)}.bar .n{background:var(--neu)}.bar .g{background:var(--neg)}
+.quote{font-size:.78rem;color:var(--muted);margin-top:5px;font-style:italic}
+.cloud{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;justify-content:center;padding:6px 0}
+.cloud span{line-height:1.15;cursor:default}
+.list{display:grid;gap:9px}
+.li{padding:11px 14px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid var(--line);font-size:.87rem}
+.li small{display:block;color:var(--muted);margin-top:3px;font-size:.76rem}
+.rec{padding:14px 16px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+.rec h4{font:600 .92rem var(--body);margin:7px 0 3px}.rec p{font-size:.84rem;color:var(--muted)}
+.pr{font-size:.7rem;font-weight:700;padding:2px 9px;border-radius:999px}
+.pr.high{background:rgba(255,92,122,.16);color:#ff9db0}.pr.medium{background:rgba(245,196,81,.15);color:#f7d98a}.pr.low{background:rgba(79,216,235,.14);color:#8fe6f2}
+.trend{list-style:none}.trend li{padding:10px 0;border-bottom:1px solid var(--line);font-size:.88rem;display:flex;gap:10px}
+.trend li:last-child{border:0}.trend li::before{content:"↗";color:var(--aqua);font-weight:700}
+.empty{color:var(--muted);font-size:.88rem;padding:14px;text-align:center;border:1px dashed var(--line);border-radius:12px}
+.emo{display:flex;flex-wrap:wrap;gap:8px}.emo span{padding:6px 11px;border-radius:12px;background:rgba(255,255,255,.05);font-size:1.15rem}.emo small{font-size:.74rem;color:var(--muted);margin-left:4px}
+.two{display:grid;gap:14px;grid-template-columns:1fr 1fr}@media(max-width:620px){.two{grid-template-columns:1fr}}
+
+/* comments */
+.flt{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:14px}
+.flt input[type=search]{flex:1;min-width:180px;background:rgba(5,8,20,.7);border:1px solid var(--line);border-radius:10px;padding:8px 12px;outline:0;font-size:.86rem}
+.flt input:focus{border-color:var(--aqua)}
+.cmt{display:flex;gap:12px;padding:14px 4px;border-bottom:1px solid var(--line)}
+.cmt:last-child{border:0}
+.av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.85rem;color:#05101c;flex:none}
+.cmt .b{min-width:0;flex:1}
+.cmt .h{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:.8rem;color:var(--muted)}
+.cmt .h b{color:var(--text);font-size:.86rem}
+.cmt p{margin-top:4px;font-size:.9rem;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.cmt p.open{display:block}
+.tg{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.tg span{font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.06);color:var(--muted)}
+.tg .positive{background:rgba(61,220,151,.14);color:var(--pos)}.tg .negative{background:rgba(255,92,122,.14);color:var(--neg)}.tg .neutral{background:rgba(142,154,192,.15);color:var(--neu)}
+.tg .flag{background:rgba(245,196,81,.13);color:var(--warn)}
+.more{margin:14px auto 0;display:block}
+
+/* drawer / toast / dialog */
+.scrim{position:fixed;inset:0;background:rgba(2,4,12,.6);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,100%);z-index:50;background:#0a0f22;border-left:1px solid var(--line);transform:translateX(100%);transition:transform .25s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;padding-top:var(--safe-t);padding-bottom:var(--safe-b)}
+.drawer.on{transform:none}
+.dh{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line)}
+.dh h3{font:600 1.05rem var(--display)}
+.db{flex:1;overflow-y:auto;padding:12px 14px;display:grid;gap:10px;align-content:start}
+.df{padding:14px 18px;border-top:1px solid var(--line)}
+.hi{display:flex;gap:11px;padding:10px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.035);align-items:center;text-align:left;width:100%}
+.hi:hover{background:var(--glass2)}
+.hi img{width:84px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;flex:none;background:#000}
+.hi .t{flex:1;min-width:0}
+.hi .t b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:.84rem;line-height:1.35}
+.hi .t small{color:var(--muted);font-size:.74rem}
+.hi .sc{font:700 .95rem var(--display);flex:none;min-width:34px;text-align:center}
+.toasts{position:fixed;left:50%;bottom:calc(18px + var(--safe-b));transform:translateX(-50%);z-index:70;display:grid;gap:8px;width:min(92vw,420px)}
+.toast{padding:12px 16px;border-radius:13px;background:#141a33;border:1px solid var(--line);font-size:.88rem;box-shadow:0 14px 40px rgba(0,0,0,.5);animation:tin .22s ease-out}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}}
+dialog{margin:auto;border:1px solid var(--line);border-radius:20px;background:#0b1126;color:var(--text);padding:24px;width:min(92vw,400px)}
+dialog::backdrop{background:rgba(2,4,12,.7);backdrop-filter:blur(3px)}
+dialog h3{font:600 1.1rem var(--display);margin-bottom:8px}dialog p{color:var(--muted);font-size:.9rem}
+dialog .row{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.foot{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:var(--dim);font-size:.8rem;display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:space-between}
+
+@media(max-width:640px){
+  .brand small,.hide-s{display:none}
+  .btn.primary{width:100%}
+  .vh img{width:100%}
+  .kpis{grid-template-columns:1fr 1fr}
+  .chart{height:220px}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.wave i{transform:none}html{scroll-behavior:auto}}
+@media print{
+  body{background:#060814!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .top,.composer,.tabs,.acts,.drawer,.scrim,.toasts,.flt,.more,.foot{display:none!important}
+  .panel{display:block!important;page-break-inside:avoid}.card{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="/" aria-label="Vaani home">
+      <svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4FD8EB"/><stop offset="1" stop-color="#8B7BFF"/></linearGradient></defs><path d="M8 4h24a5 5 0 0 1 5 5v17a5 5 0 0 1-5 5H21l-8 6v-6H8a5 5 0 0 1-5-5V9a5 5 0 0 1 5-5z" fill="url(#lg)"/><g stroke="#060814" stroke-width="2.8" stroke-linecap="round"><path d="M12 15v6M17 11v14M22 8v20M27 12v12M32 16v4"/></g></svg>
+      <span><b>Vaani</b><small>Audience intelligence</small></span>
+    </a>
+    <div class="top-r">
+      <span class="badge" id="mode"><i></i><span>Checking…</span></span>
+      <button class="btn" id="histBtn" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg><span class="hide-s">History</span></button>
+    </div>
+  </header>
+
+  <section class="lead">
+    <h1>Hear what your audience is <span>really saying.</span></h1>
+    <p>Paste any YouTube link. Vaani reads the comments in English, Hindi and Hinglish, then shows the mood, what people want next and what to fix first.</p>
+    <div class="wave" id="wave" aria-hidden="true"></div>
+  </section>
+
+  <section class="composer" aria-label="Analyse a video">
+    <div class="urlrow">
+      <div class="field">
+        <input id="url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="Paste a YouTube link (press / to focus)" aria-label="YouTube video link">
+        <button class="icon-btn" id="pasteBtn" title="Paste from clipboard" aria-label="Paste from clipboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/></svg></button>
+        <button class="icon-btn" id="clearUrl" title="Clear link" aria-label="Clear link" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <button class="btn primary" id="go">Analyse video</button>
+    </div>
+    <div class="opts">
+      <label>Comments <select id="max"><option value="100">100</option><option value="300" selected>300</option><option value="500">500</option><option value="1000">1,000</option><option value="1500">1,500</option></select></label>
+      <label>Sort <select id="order"><option value="relevance">Top comments</option><option value="time">Newest first</option></select></label>
+      <label><input type="checkbox" id="replies"> Include replies</label>
+    </div>
+    <div class="preview" id="preview"><iframe id="frame" title="Video preview" loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+    <div class="err" id="err" role="alert"></div>
+    <div class="loader" id="loader" aria-live="polite">
+      <div class="ring"><svg width="92" height="92" viewBox="0 0 92 92"><defs><linearGradient id="ringg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4FD8EB"/><stop offset="1" stop-color="#8B7BFF"/></linearGradient></defs><circle class="bg" cx="46" cy="46" r="40"/><circle class="fg" id="ringfg" cx="46" cy="46" r="40" stroke-dasharray="251.3" stroke-dashoffset="251.3"/></svg><b id="secs">0s</b></div>
+      <div class="steps" id="steps"></div>
+      <button class="btn" id="cancel">Cancel</button>
+    </div>
+  </section>
+
+  <main id="results">
+    <div class="vh" id="vh"></div>
+    <div id="warns"></div>
+    <div class="tabs" role="tablist" id="tabs">
+      <button class="tab" role="tab" data-t="overview" aria-selected="true">Overview</button>
+      <button class="tab" role="tab" data-t="audience" aria-selected="false">Audience</button>
+      <button class="tab" role="tab" data-t="insights" aria-selected="false">Insights</button>
+      <button class="tab" role="tab" data-t="comments" aria-selected="false">Comments</button>
+    </div>
+
+    <section class="panel on" id="p-overview">
+      <div class="grid">
+        <div class="card c4"><h3>Audience pulse</h3><div class="sub">Like-weighted mood, 0 to 100</div><div class="gauge" id="gauge"></div></div>
+        <div class="card c8"><h3>At a glance</h3><div class="sub">What the sample says</div><div class="kpis" id="kpis"></div><ul class="ins" id="insights" style="margin-top:16px"></ul></div>
+      </div>
+      <div class="grid">
+        <div class="card c5"><h3>Sentiment split</h3><div class="sub">Share of comments by tone</div><div class="chart"><canvas id="ch-pie"></canvas></div></div>
+        <div class="card c7"><h3>Sentiment over time</h3><div class="sub" id="tlsub">Comments per period</div><div class="chart"><canvas id="ch-line"></canvas></div></div>
+      </div>
+    </section>
+
+    <section class="panel" id="p-audience">
+      <div class="grid">
+        <div class="card c6"><h3>Languages</h3><div class="sub">English, Hindi and Hinglish by sentiment</div><div class="chart"><canvas id="ch-lang"></canvas></div></div>
+        <div class="card c6"><h3>When people comment</h3><div class="sub" id="hrsub">By hour, your local time</div><div class="chart"><canvas id="ch-hour"></canvas></div></div>
+      </div>
+      <div class="grid">
+        <div class="card c4"><h3>Engagement</h3><div class="sub">Video and comment health</div><div class="list" id="eng"></div></div>
+        <div class="card c4"><h3>Most active viewers</h3><div class="sub">Repeat or highly liked commenters</div><div class="list" id="auth"></div></div>
+        <div class="card c4"><h3>Emoji</h3><div class="sub">Most used</div><div class="emo" id="emo"></div></div>
+      </div>
+    </section>
+
+    <section class="panel" id="p-insights">
+      <div class="grid">
+        <div class="card c6"><h3>What people talk about</h3><div class="sub">Sentiment by topic</div><div class="bars" id="aspects"></div></div>
+        <div class="card c6"><h3>Keywords and phrases</h3><div class="sub">Size shows frequency</div><div class="cloud" id="cloud"></div><div class="chips" id="phrases" style="justify-content:center;margin-top:12px"></div></div>
+      </div>
+      <div class="grid">
+        <div class="card c6"><h3>What viewers want next</h3><div class="sub">Requests, most liked first</div><div class="list" id="demands"></div></div>
+        <div class="card c6"><h3>Questions to answer</h3><div class="sub">Unanswered questions from the audience</div><div class="list" id="questions"></div></div>
+      </div>
+      <div class="grid">
+        <div class="card c6"><h3>Most-liked praise</h3><div class="sub">What is landing</div><div class="list" id="tpos"></div></div>
+        <div class="card c6"><h3>Most-liked criticism</h3><div class="sub">What to fix</div><div class="list" id="tneg"></div></div>
+      </div>
+      <div class="grid">
+        <div class="card c7"><h3>Recommendations</h3><div class="sub">Ordered by priority</div><div class="list" id="recs"></div></div>
+        <div class="card c5"><h3>Niche trends</h3><div class="sub" id="niche"></div><ul class="trend" id="trends"></ul></div>
+      </div>
+    </section>
+
+    <section class="panel" id="p-comments">
+      <div class="card">
+        <h3>Comment explorer <span class="chip" id="ccount" style="margin-left:6px"></span></h3>
+        <div class="sub">Filter, sort and export everything that was analysed</div>
+        <div class="flt">
+          <select id="f-sent" aria-label="Sentiment"><option value="all">All sentiments</option><option value="positive">Positive</option><option value="neutral">Neutral</option><option value="negative">Negative</option></select>
+          <select id="f-lang" aria-label="Language"><option value="all">All languages</option><option value="english">English</option><option value="hindi">Hindi</option><option value="hinglish">Hinglish</option></select>
+          <select id="f-asp" aria-label="Topic"><option value="all">All topics</option></select>
+          <select id="f-flag" aria-label="Type"><option value="all">All types</option><option value="question">Questions</option><option value="demand">Requests</option><option value="spam">Spam-like</option><option value="toxic">Abusive</option></select>
+          <select id="f-sort" aria-label="Sort"><option value="likes">Most liked</option><option value="new">Newest</option><option value="old">Oldest</option><option value="pos">Most positive</option><option value="neg">Most negative</option></select>
+          <input type="search" id="f-q" placeholder="Search comments or authors" aria-label="Search comments">
+        </div>
+        <div id="clist"></div>
+        <button class="btn more" id="more" hidden>Show more</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot"><span>Vaani · sentiment tuned for English, Hindi and Hinglish</span><span>Scores are automated estimates from a sample of public comments.</span></footer>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Analysis history" aria-hidden="true">
+  <div class="dh"><h3>History</h3><button class="icon-btn" id="hClose" aria-label="Close history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="db" id="hList"></div>
+  <div class="df"><button class="btn danger" id="hClear" style="width:100%">Clear all history</button></div>
+</aside>
+<dialog id="dlg"><h3 id="dT"></h3><p id="dP"></p><div class="row"><button class="btn" id="dNo">Cancel</button><button class="btn danger" id="dYes">Delete</button></div></dialog>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num=n=>n==null?"Hidden":Number(n).toLocaleString();
+const cmp=n=>n==null?"Hidden":new Intl.NumberFormat(undefined,{notation:"compact",maximumFractionDigits:1}).format(n);
+const C={pos:"#3ddc97",neu:"#8e9ac0",neg:"#ff5c7a",aqua:"#4fd8eb",violet:"#8b7bff"};
+const idOk=s=>/^[\w-]{11}$/.test(s||"")?s:null;
+const dateFmt=s=>{const d=new Date(s);return isNaN(d)?"":d.toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"})};
+let state={data:null,page:1,filtered:[]},ctrl=null,timer=null,charts={};
+
+/* ---------- storage ---------- */
+const store={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+const saved=store.get("vaani.opts",{});
+if(saved.max)$("max").value=saved.max;if(saved.order)$("order").value=saved.order;$("replies").checked=!!saved.replies;
+["max","order","replies"].forEach(i=>$(i).addEventListener("change",()=>store.set("vaani.opts",{max:$("max").value,order:$("order").value,replies:$("replies").checked})));
+
+/* ---------- ui helpers ---------- */
+function toast(msg){const t=document.createElement("div");t.className="toast";t.textContent=msg;$("toasts").appendChild(t);setTimeout(()=>t.remove(),3600)}
+function showErr(m){$("err").textContent=m;$("err").classList.add("on")}
+function hideErr(){$("err").classList.remove("on")}
+function confirmBox(title,text,yes){return new Promise(res=>{$("dT").textContent=title;$("dP").textContent=text;$("dYes").textContent=yes;const d=$("dlg");d.showModal();const done=v=>{d.close();$("dYes").onclick=$("dNo").onclick=null;res(v)};$("dYes").onclick=()=>done(true);$("dNo").onclick=()=>done(false)})}
+(function wave(){const w=$("wave");let h="";for(let i=0;i<54;i++){const r=Math.random(),c=r<.62?C.pos:r<.84?C.neu:C.neg;const ht=14+Math.abs(Math.sin(i*.55)*.6+Math.sin(i*.17)*.4)*42;h+=`<i style="height:${ht}px;background:${c};opacity:${.55+Math.random()*.45};animation-delay:${i*22}ms"></i>`}w.innerHTML=h})();
+
+/* ---------- link handling ---------- */
+function extractId(u){u=(u||"").trim();if(idOk(u))return u;try{const x=new URL(/^https?:/i.test(u)?u:"https://"+u),h=x.hostname.replace(/^(www|m)\./,"");if(h==="youtu.be")return idOk(x.pathname.slice(1,12));if(/(^|\.)youtube(-nocookie)?\.com$/.test(h)){const v=x.searchParams.get("v");if(idOk(v))return v;const m=x.pathname.match(/^\/(?:embed|shorts|live|v)\/([\w-]{11})/);if(m)return m[1]}}catch{}return null}
+function syncUrl(){const v=$("url").value.trim(),id=extractId(v);$("clearUrl").hidden=!v;const f=$("frame"),p=$("preview");if(id){const src="https://www.youtube-nocookie.com/embed/"+id;if(f.dataset.id!==id){f.src=src;f.dataset.id=id}p.classList.add("on")}else{f.removeAttribute("src");f.dataset.id="";p.classList.remove("on")}}
+$("url").addEventListener("input",()=>{hideErr();syncUrl()});
+$("url").addEventListener("keydown",e=>{if(e.key==="Enter")analyse()});
+$("clearUrl").onclick=()=>{$("url").value="";syncUrl();hideErr();$("url").focus()};
+$("pasteBtn").onclick=async()=>{try{$("url").value=(await navigator.clipboard.readText()).trim();syncUrl();$("url").focus()}catch{toast("Clipboard is blocked. Paste with Ctrl/Cmd+V instead.")}};
+document.addEventListener("keydown",e=>{if(e.key==="/"&&!/input|select|textarea/i.test(document.activeElement.tagName)){e.preventDefault();$("url").focus()}if(e.key==="Escape")closeDrawer()});
+
+/* ---------- analyse ---------- */
+const STEPS=["Reading the video link","Fetching video details and comments","Detecting language (English, Hindi, Hinglish)","Scoring sentiment and topics","Finding requests, questions and trends","Building your dashboard"];
+const STEP_AT=[0,2,4,8,13,19];
+function startLoader(){const L=$("loader");L.classList.add("on");$("steps").innerHTML=STEPS.map(s=>`<div>${s}</div>`).join("");const t0=Date.now(),fg=$("ringfg"),k=251.3;let cur=-1;
+  timer=setInterval(()=>{const s=(Date.now()-t0)/1000,p=92*(1-Math.exp(-s/9));fg.style.strokeDashoffset=k*(1-p/100);$("secs").textContent=Math.floor(s)+"s";let i=0;STEP_AT.forEach((t,j)=>{if(s>=t)i=j});if(i!==cur){cur=i;[...$("steps").children].forEach((el,j)=>el.className=j<i?"done":j===i?"on":"")}},250)}
+function stopLoader(ok){clearInterval(timer);if(ok){$("ringfg").style.strokeDashoffset=0;[...$("steps").children].forEach(e=>e.className="done")}setTimeout(()=>$("loader").classList.remove("on"),ok?350:0)}
+async function analyse(){
+  const url=$("url").value.trim();if(!url){showErr("Paste a YouTube link to get started.");return}
+  if(!extractId(url)){showErr("That doesn't look like a YouTube video link. Try a youtube.com/watch, youtu.be or Shorts link.");return}
+  hideErr();$("go").disabled=true;startLoader();ctrl=new AbortController();
+  try{
+    const r=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},signal:ctrl.signal,body:JSON.stringify({url,max_comments:+$("max").value,order:$("order").value,replies:$("replies").checked})});
+    const d=await r.json().catch(()=>({error:"The server sent an unexpected response. Please try again."}));
+    if(!r.ok||d.error)throw new Error(d.error||"Request failed");
+    stopLoader(true);setTimeout(()=>{show(d);toast(`Analysed ${num(d.analysis.summary.total)} comments`);loadHistory()},380);
+  }catch(e){stopLoader(false);if(e.name==="AbortError")toast("Analysis cancelled");else showErr(e.message==="Failed to fetch"?"Can't reach the server. Check your connection and try again.":e.message)}
+  finally{$("go").disabled=false;ctrl=null}
+}
+$("go").onclick=analyse;$("cancel").onclick=()=>ctrl&&ctrl.abort();
+
+/* ---------- render ---------- */
+function show(d){state.data=d;state.page=1;document.body.classList.add("has-results");
+  $("url").value=d.video.url||$("url").value;syncUrl();renderHead(d);renderOverview(d);renderAudience(d);renderInsights(d);initComments(d);setTab("overview");
+  $("results").scrollIntoView({behavior:"smooth",block:"start"})}
+function renderHead(d){const v=d.video,t=idOk(v.id)?`https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`:"";
+  $("vh").innerHTML=`${t?`<img src="${esc(v.thumbnail&&v.thumbnail.startsWith("https://")?v.thumbnail:t)}" alt="" onerror="this.src='${t}'">`:""}<div class="info"><h2>${esc(v.title||"Untitled")}</h2><div class="ch">${esc(v.channel||"")}</div>
+  <div class="chips"><span class="chip"><b>${cmp(v.view_count)}</b> views</span><span class="chip"><b>${cmp(v.like_count)}</b> likes</span><span class="chip"><b>${cmp(v.comment_count)}</b> comments</span>${v.duration_text?`<span class="chip"><b>${esc(v.duration_text)}</b> long</span>`:""}${v.published?`<span class="chip">${esc(dateFmt(v.published))}</span>`:""}<span class="chip">Niche <b>${esc(v.niche||"general")}</b></span></div>
+  <div class="acts"><button class="btn sm" data-a="csv">Export CSV</button><button class="btn sm" data-a="json">Export JSON</button><button class="btn sm" data-a="copy">Copy summary</button><button class="btn sm" data-a="print">Print / PDF</button><button class="btn sm" data-a="new">New analysis</button></div></div>`;
+  $("warns").innerHTML=(d.warnings||[]).map(w=>`<div class="warn">${esc(w)}</div>`).join("")}
+function gauge(p,lab){const L=282.7,col=p>=60?C.pos:p>=45?"#f5c451":C.neg;
+  return `<svg viewBox="0 0 220 125"><defs><linearGradient id="gg" x1="0" x2="1"><stop offset="0" stop-color="${C.neg}"/><stop offset=".5" stop-color="#f5c451"/><stop offset="1" stop-color="${C.pos}"/></linearGradient></defs><path d="M20 110A90 90 0 0 1 200 110" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="14" stroke-linecap="round"/><path id="garc" d="M20 110A90 90 0 0 1 200 110" fill="none" stroke="url(#gg)" stroke-width="14" stroke-linecap="round" stroke-dasharray="${L}" stroke-dashoffset="${L}" style="transition:stroke-dashoffset 1.3s cubic-bezier(.2,.8,.2,1)"/></svg><div class="num" style="color:${col}">${p}</div><div class="lab">${esc(lab)}</div>`}
+function renderOverview(d){const s=d.analysis.summary;$("gauge").innerHTML=gauge(s.pulse,s.pulse_label)+`<div class="meta"><span class="chip">Trend <b>${esc(s.trend.direction)}</b></span><span class="chip">Split <b>${s.controversy>=.5?"divided":s.controversy>=.25?"mixed":"agreed"}</b></span></div>`;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{const a=$("garc");if(a)a.style.strokeDashoffset=282.7*(1-s.pulse/100)}));
+  $("kpis").innerHTML=`<div class="kpi"><span>Comments analysed</span><b>${num(s.total)}</b><small>${num(s.unique_authors)} people</small></div><div class="kpi pos"><span>Positive</span><b>${s.positive_pct}%</b><small>${num(s.positive)} comments</small></div><div class="kpi neu"><span>Neutral</span><b>${s.neutral_pct}%</b><small>${num(s.neutral)} comments</small></div><div class="kpi neg"><span>Negative</span><b>${s.negative_pct}%</b><small>${num(s.negative)} comments</small></div><div class="kpi"><span>Average score</span><b style="color:${s.avg_compound>=0?C.pos:C.neg}">${s.avg_compound>0?"+":""}${s.avg_compound}</b><small>from −1 to +1</small></div><div class="kpi"><span>Like rate</span><b>${s.like_rate==null?"—":s.like_rate+"%"}</b><small>likes per view</small></div>`;
+  $("insights").innerHTML=d.analysis.insights.map(i=>`<li>${esc(i)}</li>`).join("");
+  const tl=d.analysis.timeline,g=d.analysis.granularity;$("tlsub").textContent=`Comments per ${g}`;
+  chart("ch-pie",{type:"doughnut",data:{labels:["Positive","Neutral","Negative"],datasets:[{data:[s.positive,s.neutral,s.negative],backgroundColor:[C.pos,C.neu,C.neg],borderWidth:0,hoverOffset:6}]},options:{cutout:"66%",plugins:{legend:{position:"bottom"}}}});
+  chart("ch-line",{type:"bar",data:{labels:tl.map(x=>x.date.slice(g==="month"?0:5)),datasets:[{label:"Positive",data:tl.map(x=>x.positive),backgroundColor:C.pos},{label:"Neutral",data:tl.map(x=>x.neutral),backgroundColor:C.neu},{label:"Negative",data:tl.map(x=>x.negative),backgroundColor:C.neg}]},options:{scales:{x:{stacked:true,grid:{display:false},ticks:{maxTicksLimit:10}},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}},plugins:{legend:{position:"bottom"}}}})}
+function renderAudience(d){const a=d.analysis,s=a.summary,ls=a.lang_sentiment,names=Object.keys(ls);
+  chart("ch-lang",{type:"bar",data:{labels:names.map(n=>n[0].toUpperCase()+n.slice(1)),datasets:[["positive",C.pos],["neutral",C.neu],["negative",C.neg]].map(([k,c])=>({label:k[0].toUpperCase()+k.slice(1),data:names.map(n=>ls[n][k]||0),backgroundColor:c}))},options:{indexAxis:"y",scales:{x:{stacked:true,beginAtZero:true,ticks:{precision:0}},y:{stacked:true,grid:{display:false}}},plugins:{legend:{position:"bottom"}}}});
+  const hrs=new Array(24).fill(0);a.comments.forEach(c=>{const t=new Date(c.published);if(!isNaN(t))hrs[t.getHours()]++});const pk=hrs.indexOf(Math.max(...hrs));
+  $("hrsub").textContent=Math.max(...hrs)?`Peak around ${(pk%12)||12} ${pk<12?"AM":"PM"} your time`:"No timestamps";
+  chart("ch-hour",{type:"bar",data:{labels:hrs.map((_,i)=>i%3===0?`${(i%12)||12}${i<12?"a":"p"}`:""),datasets:[{label:"Comments",data:hrs,backgroundColor:hrs.map((_,i)=>i===pk?C.aqua:"rgba(139,123,255,.55)"),borderRadius:4}]},options:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{autoSkip:false,maxRotation:0}},y:{beginAtZero:true,ticks:{precision:0}}}}});
+  const row=(k,v,sm)=>`<div class="li"><b>${v}</b> ${k}${sm?`<small>${sm}</small>`:""}</div>`;
+  $("eng").innerHTML=row("like rate",s.like_rate==null?"—":s.like_rate+"%","Likes ÷ views. Around 3–5% is healthy.")+row("comment rate",s.comment_rate==null?"—":s.comment_rate+"%","Comments ÷ views")+row("characters per comment",s.avg_len,"Longer comments usually mean deeper engagement")+row("are questions",s.question_pct+"%")+row("look like spam",s.spam_pct+"%")+row("contain abuse",s.toxic_pct+"%");
+  $("auth").innerHTML=a.top_authors.length?a.top_authors.map(x=>`<div class="li"><b>${esc(x.author)}</b><small>${x.count} comment${x.count>1?"s":""} · ${num(x.likes)} likes · mood ${x.avg>0?"+":""}${x.avg}</small></div>`).join(""):`<div class="empty">No repeat commenters in this sample.</div>`;
+  $("emo").innerHTML=a.emojis.length?a.emojis.map(e=>`<span>${esc(e.emoji)}<small>${e.count}</small></span>`).join(""):`<div class="empty" style="width:100%">No emoji found.</div>`}
+function renderInsights(d){const a=d.analysis,order=Object.entries(a.aspects).sort((x,y)=>y[1].total-x[1].total);
+  $("aspects").innerHTML=order.map(([n,v])=>{const t=v.total||1,col=v.score>.1?C.pos:v.score<-.1?C.neg:C.neu,q=v.score<-.1&&v.complaint?v.complaint:v.score>.1&&v.praise?v.praise:"";
+    return `<div><div class="bar-h"><b>${esc(n)}</b><span style="color:${col};font-weight:700">${v.score>0?"+":""}${v.score} · ${v.total}</span></div><div class="bar"><i class="p" style="width:${v.positive/t*100}%"></i><i class="n" style="width:${v.neutral/t*100}%"></i><i class="g" style="width:${v.negative/t*100}%"></i></div>${q?`<div class="quote">“${esc(q)}”</div>`:""}</div>`}).join("")||`<div class="empty">No topic data.</div>`;
+  const w=a.top_words.slice(0,30),mx=w[0]?.count||1,mn=w.at(-1)?.count||1,cols=[C.aqua,C.violet,"#f472b6","#f5c451",C.pos,"#9fb0ff"];
+  $("cloud").innerHTML=w.map((x,i)=>`<span style="font-size:${.8+(x.count-mn)/(mx-mn||1)*1.5}rem;color:${cols[i%cols.length]};font-weight:${i<6?700:500}">${esc(x.word)}</span>`).join("")||`<div class="empty">No keywords.</div>`;
+  $("phrases").innerHTML=a.top_phrases.map(p=>`<span class="chip">${esc(p.phrase)} <b>${p.count}</b></span>`).join("");
+  const li=(arr,empty)=>arr.length?arr.map(x=>`<div class="li">“${esc(x.text)}”<small>${esc(x.author)} · ${num(x.likes)} likes</small></div>`).join(""):`<div class="empty">${empty}</div>`;
+  $("demands").innerHTML=li(a.demands,"No clear requests detected in this sample.");$("questions").innerHTML=li(a.questions,"No questions detected.");
+  $("tpos").innerHTML=li(a.top_positive,"No standout praise.");$("tneg").innerHTML=li(a.top_negative,"No standout criticism.");
+  $("recs").innerHTML=d.recommendations.map(r=>`<div class="rec"><span class="pr ${r.priority}">${r.priority}</span><h4>${esc(r.title)}</h4><p>${esc(r.detail)}</p></div>`).join("");
+  $("niche").textContent=d.trends.niche;$("trends").innerHTML=d.trends.items.map(t=>`<li>${esc(t)}</li>`).join("")}
+
+/* ---------- charts ---------- */
+function chart(id,cfg){if(typeof Chart==="undefined"){$(id).parentNode.innerHTML='<div class="empty">Charts could not load. Check your connection and reload.</div>';return}
+  if(charts[id])charts[id].destroy();Chart.defaults.color="#8a92b2";Chart.defaults.font.family="Manrope, system-ui, sans-serif";Chart.defaults.borderColor="rgba(160,175,255,.09)";
+  cfg.options={responsive:true,maintainAspectRatio:false,animation:{duration:700},...cfg.options};charts[id]=new Chart($(id),cfg)}
+
+/* ---------- comments ---------- */
+const PAGE=25;
+function initComments(d){const sel=$("f-asp");while(sel.options.length>1)sel.remove(1);Object.keys(d.analysis.aspects).forEach(a=>sel.add(new Option(a[0].toUpperCase()+a.slice(1),a)));["f-sent","f-lang","f-asp","f-flag"].forEach(i=>$(i).value="all");$("f-sort").value="likes";$("f-q").value="";applyFilters()}
+function applyFilters(){const c=state.data.analysis.comments,s=$("f-sent").value,l=$("f-lang").value,a=$("f-asp").value,f=$("f-flag").value,q=$("f-q").value.toLowerCase().trim(),so=$("f-sort").value;
+  let r=c.filter(x=>(s==="all"||x.label===s)&&(l==="all"||x.lang===l)&&(a==="all"||x.aspects.includes(a))&&(f==="all"||x.flags.includes(f))&&(!q||x.text.toLowerCase().includes(q)||(x.author||"").toLowerCase().includes(q)));
+  const by={likes:(x,y)=>y.likes-x.likes,new:(x,y)=>(y.published||"").localeCompare(x.published||""),old:(x,y)=>(x.published||"").localeCompare(y.published||""),pos:(x,y)=>y.score-x.score,neg:(x,y)=>x.score-y.score};
+  state.filtered=r.sort(by[so]);state.page=1;drawComments()}
+function drawComments(){const r=state.filtered,n=state.page*PAGE;$("ccount").textContent=`${num(r.length)} of ${num(state.data.analysis.comments.length)}`;
+  $("clist").innerHTML=r.slice(0,n).map(c=>{const col=c.label==="positive"?C.pos:c.label==="negative"?C.neg:C.neu;
+    return `<article class="cmt"><div class="av" style="background:${col}">${esc((c.author||"?").replace(/^@/,"").charAt(0).toUpperCase())}</div><div class="b"><div class="h"><b>${esc(c.author)}</b><span>${esc(dateFmt(c.published))}</span><span>👍 ${num(c.likes)}</span></div><p onclick="this.classList.toggle('open')" title="Click to expand">${esc(c.text)}</p><div class="tg"><span class="${c.label}">${c.label}</span><span>${esc(c.lang)}</span>${c.aspects.filter(a=>a!=="general").map(a=>`<span>${esc(a)}</span>`).join("")}${c.flags.map(f=>`<span class="flag">${f}</span>`).join("")}</div></div></article>`}).join("")||`<div class="empty">No comments match these filters.</div>`;
+  $("more").hidden=r.length<=n}
+["f-sent","f-lang","f-asp","f-flag","f-sort"].forEach(i=>$(i).addEventListener("change",applyFilters));
+let qt;$("f-q").addEventListener("input",()=>{clearTimeout(qt);qt=setTimeout(applyFilters,180)});
+$("more").onclick=()=>{state.page++;drawComments()};
+
+/* ---------- tabs ---------- */
+function setTab(t){document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",b.dataset.t===t));document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("on",p.id==="p-"+t));Object.values(charts).forEach(c=>c.resize())}
+$("tabs").addEventListener("click",e=>{const b=e.target.closest(".tab");if(b){setTab(b.dataset.t);$("tabs").scrollIntoView({block:"nearest"})}});
+
+/* ---------- actions ---------- */
+const safeCell=v=>{let s=String(v??"").replace(/"/g,'""');if(/^[=+\-@\t\r]/.test(s))s="'"+s;return `"${s}"`};
+function download(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+function reset(){state.data=null;Object.values(charts).forEach(c=>c.destroy());charts={};document.body.classList.remove("has-results");$("url").value="";syncUrl();hideErr();window.scrollTo({top:0,behavior:"smooth"});$("url").focus()}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-a]");if(!b||!state.data)return;const d=state.data,v=d.video,slug=(v.id||"report");
+  if(b.dataset.a==="csv"){const h=["author","text","likes","published","sentiment","score","language","topics","flags"];download(`vaani-${slug}.csv`,"\ufeff"+[h.join(",")].concat(d.analysis.comments.map(c=>[c.author,c.text,c.likes,c.published,c.label,c.score,c.lang,c.aspects.join("|"),c.flags.join("|")].map(safeCell).join(","))).join("\r\n"),"text/csv;charset=utf-8");toast("CSV downloaded")}
+  if(b.dataset.a==="json"){download(`vaani-${slug}.json`,JSON.stringify(d,null,2),"application/json");toast("JSON downloaded")}
+  if(b.dataset.a==="copy"){const s=d.analysis.summary,t=`${v.title} — ${v.channel}\nAudience pulse ${s.pulse}/100 (${s.pulse_label}) · ${s.positive_pct}% positive, ${s.negative_pct}% negative · ${s.total} comments\n\n`+d.analysis.insights.map(i=>"• "+i).join("\n")+"\n\nTop actions:\n"+d.recommendations.slice(0,4).map(r=>`• ${r.title}: ${r.detail}`).join("\n");(navigator.clipboard?navigator.clipboard.writeText(t).then(()=>toast("Summary copied")).catch(()=>toast("Copy failed")):toast("Copy isn't supported here"))}
+  if(b.dataset.a==="print"){document.querySelectorAll(".panel").forEach(p=>p.classList.add("on"));Object.values(charts).forEach(c=>c.resize());setTimeout(()=>{window.print();setTab(document.querySelector('.tab[aria-selected="true"]').dataset.t)},300)}
+  if(b.dataset.a==="new")reset()});
+
+/* ---------- history ---------- */
+function openDrawer(){loadHistory();$("drawer").classList.add("on");$("scrim").classList.add("on");$("drawer").setAttribute("aria-hidden","false");$("hClose").focus()}
+function closeDrawer(){$("drawer").classList.remove("on");$("scrim").classList.remove("on");$("drawer").setAttribute("aria-hidden","true")}
+$("histBtn").onclick=openDrawer;$("hClose").onclick=closeDrawer;$("scrim").onclick=closeDrawer;
+async function loadHistory(){try{const r=await fetch("/api/history");const rows=await r.json();$("hClear").hidden=!rows.length;
+  $("hList").innerHTML=rows.length?rows.map(h=>{const col=h.pulse>=60?C.pos:h.pulse>=45?"#f5c451":C.neg;return `<div style="display:flex;gap:6px;align-items:center"><button class="hi" data-load="${h.id}"><img src="${idOk(h.video_id)?`https://i.ytimg.com/vi/${h.video_id}/mqdefault.jpg`:""}" alt="" loading="lazy"><span class="t"><b>${esc(h.title||h.video_id)}</b><small>${esc(h.channel||"")} · ${esc(dateFmt(h.created_at))}</small></span><span class="sc" style="color:${col}">${h.pulse}</span></button><button class="icon-btn" data-del="${h.id}" aria-label="Delete this report" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button></div>`}).join(""):`<div class="empty">No analyses yet. Reports you run appear here so you can reopen them.</div>`}catch{$("hList").innerHTML=`<div class="empty">Couldn't load history.</div>`}}
+$("hList").addEventListener("click",async e=>{const l=e.target.closest("[data-load]"),x=e.target.closest("[data-del]");
+  if(l){try{const r=await fetch("/api/history/"+l.dataset.load),d=await r.json();if(!r.ok)throw new Error(d.error);closeDrawer();show(d)}catch(err){toast(err.message||"Couldn't open that report")}}
+  if(x&&await confirmBox("Delete this report?","It will be removed from your history.","Delete")){await fetch("/api/history/"+x.dataset.del,{method:"DELETE"});toast("Report deleted");loadHistory()}});
+$("hClear").onclick=async()=>{if(await confirmBox("Clear all history?","Every saved report will be permanently deleted. This can't be undone.","Clear all")){await fetch("/api/history",{method:"DELETE"});toast("History cleared");loadHistory()}};
+
+/* ---------- boot ---------- */
+fetch("/api/health").then(r=>r.json()).then(h=>{const b=$("mode");b.className="badge "+(h.mode==="live"?"live":"");b.lastElementChild.textContent=h.mode==="live"?"Live data":"Demo mode";
+  [...$("max").options].forEach(o=>{if(+o.value>h.max_comments)o.remove()})}).catch(()=>{$("mode").lastElementChild.textContent="Offline"});
+</script>
+</body>
+</html>

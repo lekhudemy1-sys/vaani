@@ -1,0 +1,4 @@
+flask>=3.0.0
+vaderSentiment>=3.3.2
+python-dotenv>=1.0.0
+gunicorn>=22.0.0; sys_platform != "win32"
