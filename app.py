@@ -24,6 +24,7 @@ from datetime import datetime, timedelta, timezone
 
 from flask import Flask, jsonify, request, send_file
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 BASE = os.path.dirname(os.path.abspath(__file__))
@@ -36,7 +37,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Config (all via environment — never hardcode keys)
 # ---------------------------------------------------------------------------
-API_KEY = os.environ.get("YOUTUBE_API_KEY", "").strip() or "AIzaSyDJFAnch85SVMlPf5fTUx50Zbfm0bempf4"
+API_KEY = os.environ.get("YOUTUBE_API_KEY", "").strip()
 DB_PATH = os.environ.get("DB_PATH", os.path.join(BASE, "vaani.db"))
 HARD_MAX = int(os.environ.get("MAX_COMMENTS_LIMIT", "1500"))
 DEFAULT_MAX = 300
@@ -665,6 +666,17 @@ def headers(resp):
     if request.path.startswith("/api/"):
         resp.headers["Cache-Control"] = "no-store"
     return resp
+
+
+@app.errorhandler(Exception)
+def on_error(e):
+    """API errors are always JSON so the page can show a real message."""
+    if isinstance(e, HTTPException):
+        if request.path.startswith("/api/"):
+            return jsonify({"error": e.description}), e.code
+        return e
+    app.logger.exception("Unhandled error on %s", request.path)
+    return jsonify({"error": "Server error while processing this request. Check the server logs for details."}), 500
 
 
 # ---------------------------------------------------------------------------

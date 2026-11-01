@@ -389,7 +389,7 @@ async function analyse(){
   hideErr();$("go").disabled=true;startLoader();ctrl=new AbortController();
   try{
     const r=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},signal:ctrl.signal,body:JSON.stringify({url,max_comments:+$("max").value,order:$("order").value,replies:$("replies").checked})});
-    const d=await r.json().catch(()=>({error:"The server sent an unexpected response. Please try again."}));
+    const d=await r.json().catch(()=>({error:`The server sent an unexpected response (HTTP ${r.status}). If this is not your onrender.com address, open that one. Otherwise check the server logs.`}));
     if(!r.ok||d.error)throw new Error(d.error||"Request failed");
     stopLoader(true);setTimeout(()=>{show(d);toast(`Analysed ${num(d.analysis.summary.total)} comments`);loadHistory()},380);
   }catch(e){stopLoader(false);if(e.name==="AbortError")toast("Analysis cancelled");else showErr(e.message==="Failed to fetch"?"Can't reach the server. Check your connection and try again.":e.message)}
